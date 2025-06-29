@@ -54,7 +54,7 @@ function App() {
       console.log('User not authenticated');
       setUser(null);
     }
-    setLoading(false);
+    await signInWithRedirect();
   }
 
   async function handleSignIn() {
@@ -82,6 +82,12 @@ function App() {
     }
   }
 
+  useEffect(() => {
+    if (!loading && !user) {
+      handleSignIn();
+    }
+  }, [loading, user]);
+
   if (loading) {
     return (
       <main>
@@ -89,6 +95,10 @@ function App() {
       </main>
     );
   }
+
+  if (loading || !user) {
+  return null;                 
+}
 
   if (!user) {
     return (
