@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
-import { getCurrentUser, signOut, signInWithRedirect, fetchAuthSession } from 'aws-amplify/auth';
+import {
+  getCurrentUser,
+  signOut,
+  signInWithRedirect,
+  fetchAuthSession,
+} from "aws-amplify/auth";
 import { Hub } from 'aws-amplify/utils';
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
 const client = generateClient<Schema>();
 
+interface AmplifyUser {
+  username: string;
+  signInDetails?: {
+    loginId?: string;
+  };
+  // inne potrzebne pola
+}
+
 function App() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<AmplifyUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
 
@@ -36,23 +49,22 @@ function App() {
 
   useEffect(() => {
     if (user) {
-      client.models.Todo.observeQuery().subscribe({
+      const sub = client.models.Todo.observeQuery().subscribe({
         next: (data) => setTodos([...data.items]),
       });
+      return () => sub.unsubscribe();
     }
   }, [user]);
 
   async function checkAuthState() {
     try {
-      // Sprawdź czy użytkownik wrócił z OAuth redirect
       const session = await fetchAuthSession();
       if (session.tokens) {
-        const currentUser = await getCurrentUser();
-        setUser(currentUser);
+        setUser(await getCurrentUser() as AmplifyUser);
+        return;
       }
-    } catch (error) {
+    } catch {
       console.log('User not authenticated');
-      setUser(null);
     }
     await signInWithRedirect();
   }
@@ -99,14 +111,6 @@ function App() {
   if (loading || !user) {
   return null;                 
 }
-
-  if (!user) {
-    return (
-      <main>
-        <div>Redirecting to login...</div>
-      </main>
-    );
-  }
 
   return (
     <main>
