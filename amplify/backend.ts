@@ -16,12 +16,12 @@ backend.addOutput({
       domain: "auth.kantux.com",
       scopes: ["openid", "email", "profile"],
       redirect_sign_in_uri: [
-        "http://localhost:5173/",  // dla development
-        "https://auth.kantux.com/"      // dla production
+        "http://localhost:5173/",
+        "https://camping.kantux.com/"
       ],
       redirect_sign_out_uri: [
-        "http://localhost:5173/",  // dla development  
-        "https://auth.kantux.com/"      // dla production
+        "http://localhost:5173/", 
+        "https://camping.kantux.com/"
       ],
       response_type: "code",
       identity_providers: []

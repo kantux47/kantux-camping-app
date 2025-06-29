@@ -1,29 +1,109 @@
 import { useEffect, useState } from "react";
-import { useAuthenticator } from '@aws-amplify/ui-react';
+import { getCurrentUser, signOut, signInWithRedirect, fetchAuthSession } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 
 const client = generateClient<Schema>();
 
 function App() {
-  const { user, signOut } = useAuthenticator();
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
 
   useEffect(() => {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
+    checkAuthState();
+    
+    // Nasłuchuj na zmiany stanu autentykacji
+    const hubListener = Hub.listen('auth', ({ payload }) => {
+      switch (payload.event) {
+        case 'signInWithRedirect':
+          checkAuthState();
+          break;
+        case 'signInWithRedirect_failure':
+          console.log('Sign in failure', payload.data);
+          setLoading(false);
+          break;
+        case 'signedOut':
+          setUser(null);
+          setTodos([]);
+          break;
+      }
     });
+
+    return () => hubListener();
   }, []);
 
+  useEffect(() => {
+    if (user) {
+      client.models.Todo.observeQuery().subscribe({
+        next: (data) => setTodos([...data.items]),
+      });
+    }
+  }, [user]);
+
+  async function checkAuthState() {
+    try {
+      // Sprawdź czy użytkownik wrócił z OAuth redirect
+      const session = await fetchAuthSession();
+      if (session.tokens) {
+        const currentUser = await getCurrentUser();
+        setUser(currentUser);
+      }
+    } catch (error) {
+      console.log('User not authenticated');
+      setUser(null);
+    }
+    setLoading(false);
+  }
+
+  async function handleSignIn() {
+    try {
+      await signInWithRedirect();
+    } catch (error) {
+      console.log('Error signing in:', error);
+    }
+  }
+
+  async function handleSignOut() {
+    try {
+      await signOut();
+      setUser(null);
+      setTodos([]);
+    } catch (error) {
+      console.log('Error signing out:', error);
+    }
+  }
+
   function createTodo() {
-    client.models.Todo.create({ content: window.prompt("Todo content") });
+    const content = window.prompt("Todo content");
+    if (content) {
+      client.models.Todo.create({ content });
+    }
+  }
+
+  if (loading) {
+    return (
+      <main>
+        <div>Loading...</div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return (
+      <main>
+        <h1>Welcome to Camping App</h1>
+        <button onClick={handleSignIn}>Sign in with Managed Login</button>
+      </main>
+    );
   }
 
   return (
     <main>
-      <h1>{user?.signInDetails?.loginId}'s todos</h1>
+      <h1>{user?.signInDetails?.loginId || user?.username}'s todos</h1>
       <button onClick={createTodo}>+ new</button>
-      <button onClick={signOut}>Sign out</button>
+      <button onClick={handleSignOut}>Sign out</button>
       <ul>
         {todos.map((todo) => (
           <li key={todo.id}>{todo.content}</li>
