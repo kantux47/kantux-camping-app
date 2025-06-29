@@ -93,8 +93,7 @@ function App() {
   if (!user) {
     return (
       <main>
-        <h1>Welcome to Camping App</h1>
-        <button onClick={handleSignIn}>Sign in with Managed Login</button>
+        <div>Redirecting to login...</div>
       </main>
     );
   }
