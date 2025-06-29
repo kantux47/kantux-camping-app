@@ -1,6 +1,5 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { Authenticator } from '@aws-amplify/ui-react';
 import App from "./App.tsx";
 import "./index.css";
 import outputs from "../amplify_outputs.json";
